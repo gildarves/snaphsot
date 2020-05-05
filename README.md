@@ -18,3 +18,4 @@ shotty uses the configuration file created by the AWS cli.
 <--project-PROJECT>"
 
 *command* is list,start, or stop
+project is optional
