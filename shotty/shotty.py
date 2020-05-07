@@ -9,7 +9,7 @@ def filter_instances(project):
     instances =[]
 
     if project:
-        filters = [{'Name':'tag:project', 'Values':[project]}]
+        filters = [{'Name':'tag:Project', 'Values':[project]}]
         instances = ec2.instances.filter(Filters=filters)
     else:
         instances = ec2.instances.all()
@@ -26,7 +26,9 @@ def snapshots():
 @snapshots.command('list')
 @click.option('--project', default=None,
     help="Only snapshots for project (tag project:<name>)")
-def list_volumes(project):
+@click.option('--all','list_all',default=False, is_flag=True,
+    help="List all snapshots for each volume, not just the most recent snapshot")
+def list_snapshots(project, list_all):
     "List EC2 snapshots"
 
     instances = filter_instances(project)
@@ -42,6 +44,8 @@ def list_volumes(project):
                     s.progress,
                     s.start_time.strftime("%c")
                 )))
+
+                if s.state == 'completed' and not list_all:break
     return
 
 @cli.group('volumes')
@@ -107,8 +111,8 @@ def list_instances(project):
     instances = filter_instances(project)
 
     for i in instances:
-
-        print(', '.join((i.id,i.instance_type,i.placement['AvailabilityZone'],i.state['Name'],i.public_dns_name)))
+        tags = { t['Key']: t['Value'] for t in i.tags or []}
+        print(', '.join((i.id,i.instance_type,i.placement['AvailabilityZone'],i.state['Name'],i.public_dns_name,tags.get('Project','<Not Tagged>'))))
     return
 
 @instances.command('stop')
@@ -132,13 +136,13 @@ def stop_instances(project):
 @instances.command('start')
 @click.option('--project', default=None,
     help="Only instances for project (tag project:<name>)")
-def stop_instances(project):
+def start_instances(project):
     "Start EC2 Instances"
 
     instances = filter_instances(project)
 
     for i in instances:
-        print("Stopping {0}..." .format(i.id))
+        print("Starting {0}..." .format(i.id))
         try:
             i.start()
         except botocore.exceptions.ClientError as e:
